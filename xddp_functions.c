@@ -4,7 +4,12 @@
  */
 
 #include "queue_functions.h"
-#include <rtdm/ipc.h>
+
+#ifdef _X3_
+    #include <rtdm/ipc.h>
+#else
+    #include <rtdm/rtipc.h>
+#endif
 
 
 #define XDDP_PORT 0
@@ -169,7 +174,7 @@ int open_queue_nrt (void ** msqid) {
 int send_to_queue_rt_no_block (void * msqid, message * msg) {
 	int id = *(int*)msqid;
 
-    if (sendto(id, (void * restrict) msg, sizeof(*msg), MSG_DONTWAIT, NULL, 0) == -1) {
+    if (sendto(id, (void *) msg, sizeof(*msg), MSG_DONTWAIT, NULL, 0) == -1) {
 		//perror("Error sending message to queue");
 		return ERR;
 	}
@@ -189,7 +194,7 @@ int send_to_queue_rt_block (void * msqid, message * msg) {
 	int id = *(int*)msqid;
 	int ret = ERR;
 
-	if (sendto(id, (void * restrict) msg, sizeof(*msg), 0, NULL, 0) == -1) {
+	if (sendto(id, (void *) msg, sizeof(*msg), 0, NULL, 0) == -1) {
 		//perror("Error sending message to queue");
 		return ERR;
 	}
@@ -246,7 +251,7 @@ int send_to_queue_nrt_block (void * msqid, message * msg) {
 int receive_from_queue_rt_no_block (void * msqid, message * msg) {
 	int id = *(int*)msqid;
 
-    if (recvfrom(id, (void * restrict) msg, sizeof(*msg), MSG_DONTWAIT, NULL, 0) == -1) {
+    if (recvfrom(id, (void *) msg, sizeof(*msg), MSG_DONTWAIT, NULL, 0) == -1) {
 		//perror("Error sending message to queue");
 		return ERR;
 	}
@@ -265,7 +270,7 @@ int receive_from_queue_rt_no_block (void * msqid, message * msg) {
 int receive_from_queue_rt_block (void * msqid, message * msg) {
 	int id = *(int*)msqid;
 
-    if (recvfrom(id, (void * restrict) msg, sizeof(*msg), 0, NULL, 0) == -1) {
+    if (recvfrom(id, (void *) msg, sizeof(*msg), 0, NULL, 0) == -1) {
 		//perror("Error sending message to queue");
 		return ERR;
 	}

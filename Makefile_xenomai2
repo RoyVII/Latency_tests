@@ -1,15 +1,21 @@
 XENO_CONFIG := /usr/xenomai/bin/xeno-config
-CFLAGS := $(shell $(XENO_CONFIG) --posix --cflags) -D_GNU_SOURCE
-LDFLAGS := $(shell $(XENO_CONFIG) --posix --ldflags) -lrtdm
+CFLAGS := $(shell $(XENO_CONFIG) --skin=posix --cflags) -D_GNU_SOURCE
+LDFLAGS := $(shell $(XENO_CONFIG) --skin=posix --ldflags) -lrtdm
 CC := $(shell $(XENO_CONFIG) --cc)
 LIBS := -lpthread -lrt -lm -lanalogy
 
-EXECUTABLE := xenomai
 
-all: $(EXECUTABLE)
+xenomai: queue_functions.o xenomai.o
+	$(CC) $(CFLAGS) -o xenomai xenomai.o queue_functions.o $(LIBS) $(LDFLAGS)
 
-%: %.c
-		$(CC) -o $@ $< $(CFLAGS) $(LIBS) $(LDFLAGS)
+
+xenomai.o: xenomai.c queue_functions.h
+	$(CC) -c xenomai.c $(CFLAGS) $(LIBS) $(LDFLAGS) -o xenomai.o
+
+queue_functions.o: xddp_functions.c queue_functions.h
+	$(CC) -c xddp_functions.c $(CFLAGS) $(LIBS) $(LDFLAGS) -o queue_functions.o
+
+
 
 clean:
-	rm -f xenomai xenomai.o
+	rm -f xenomai xenomai.o queue_functions.o

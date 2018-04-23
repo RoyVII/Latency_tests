@@ -258,7 +258,7 @@ int daq_digital_write (Daq_session * session, int n_channels, int * channels, un
 	}
 
 
-	data = 0;
+	/*data = 0;
 	bits[0] = 0;
 
 	err = a4l_sync_dio(session->device, session->idx_subd_dio, &mask, &data);
@@ -266,7 +266,7 @@ int daq_digital_write (Daq_session * session, int n_channels, int * channels, un
 	if (err < 0) {
 		fprintf(stderr, "Analogy digital write2: a4l_sync_dio failed (err=%d)\n", err);
 		return ERR;
-	}
+	}*/
 
     return OK;
 }
