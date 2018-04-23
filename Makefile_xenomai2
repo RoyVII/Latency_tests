@@ -1,0 +1,15 @@
+XENO_CONFIG := /usr/xenomai/bin/xeno-config
+CFLAGS := $(shell $(XENO_CONFIG) --posix --cflags) -D_GNU_SOURCE
+LDFLAGS := $(shell $(XENO_CONFIG) --posix --ldflags) -lrtdm
+CC := $(shell $(XENO_CONFIG) --cc)
+LIBS := -lpthread -lrt -lm -lanalogy
+
+EXECUTABLE := xenomai
+
+all: $(EXECUTABLE)
+
+%: %.c
+		$(CC) -o $@ $< $(CFLAGS) $(LIBS) $(LDFLAGS)
+
+clean:
+	rm -f xenomai xenomai.o
