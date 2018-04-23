@@ -10,3 +10,6 @@ all: $(EXECUTABLE)
 
 %: %.c
 		$(CC) -o $@ $< $(CFLAGS) $(LIBS) $(LDFLAGS)
+
+clean:
+	rm -f xenomai xenomai.o
