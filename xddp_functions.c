@@ -33,6 +33,10 @@ int integer_length (pid_t id) {
 }
 
 
+int open_queue_rt (void ** msqid);
+int open_queue_nrt (void ** msqid);
+
+
 /**
  * @brief Opens an IPC message queue that can be used both in real-time and non real-time environments
  * @param[out] rt_msqid Pointer to a void pointer that will be casted and filled to the queue descriptor type and filled with the queue real-time end ID

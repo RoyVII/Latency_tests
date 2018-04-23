@@ -15,4 +15,4 @@ queue_functions.o: queue_functions.c
 
 
 clean:
-	rm -f preempt preempt.o 
+	rm -f preempt preempt.o queue_functions.o
