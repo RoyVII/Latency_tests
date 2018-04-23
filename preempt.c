@@ -1,24 +1,11 @@
-#include <stdio.h>
-#include <stdlib.h>
+
 #include <comedilib.h>
-
-#include <syslog.h>
-#include <string.h>
-#include <stdarg.h>
-
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-
-#include <sys/types.h>
-#include <signal.h>
-#include <sched.h>
-#include <pthread.h>
-#include <unistd.h>
+#include "queue_functions.h"
 
 
-#define OK 1
-#define ERR -1
+
+
+
 
 
 /* RT Params */
@@ -40,7 +27,9 @@ struct _Daq_session{
 	int aref;		
 };
 
-pthread_t thread;
+pthread_t rt, writer;
+FILE * f;
+void * msqid_rt = NULL, * msqid_nrt = NULL;
 
 
 /**
@@ -207,12 +196,12 @@ int daq_digital_write (Daq_session * session, int n_channels, int * channels, un
 	}
 
 
-	data = 0;
+	/*data = 0;
 	bits[0] = 0;
 	if (comedi_dio_bitfield2(session->device, session->dio_subdev, mask, bits, 0) != 0) {
 		comedi_perror("bitfield2");
 		return ERR;
-	}
+	}*/
 
     return OK;
 }
@@ -255,14 +244,36 @@ void prepare_real_time (pthread_t id) {
 }
 
 
+void * writer_thread(void * arg) {
+    message msg;
+
+    for (;;) {
+        receive_from_queue(msqid_nrt, NRT_QUEUE, BLOCK_QUEUE, &msg);
+
+        if (msg.id < 0) {
+            break;
+        } else {
+            fprintf(f, "%s\n", msg.data);
+        }
+    }
+
+    pthread_exit(NULL);
+}
+
+
 
 void * rt_thread (void * arg) {
 	int i;
 	long points;
 	pthread_t id;
-	double freq = 10000.0;
+	double freq = 10.0;
 	int duration = 30;
 	long period;
+
+	double t_elapsed;                           /* In milliseconds */
+    long lat;
+    message msg;
+    msg.id = 0;
 
 	void * dsc = NULL;
 	Daq_session * session = NULL;
@@ -307,10 +318,26 @@ void * rt_thread (void * arg) {
 
 	for (i = 0; i < points; i++) {
 		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts_target, NULL);
+		/* Wake up and get times and latency */
+        clock_gettime(CLOCK_MONOTONIC, &ts_iter);
+        ts_substraction(&ts_target, &ts_iter, &ts_result);
+        lat = ts_result.tv_sec * NSEC_PER_SEC + ts_result.tv_nsec;
+        ts_substraction(&ts_start, &ts_iter, &ts_result);
+        t_elapsed = (ts_result.tv_sec * NSEC_PER_SEC + ts_result.tv_nsec) * 0.000001;
+
 		ts_add_time(&ts_target, 0, period);
 
+		sprintf(msg.data, "%f %ld", t_elapsed, lat);
+    	send_to_queue(msqid_rt, RT_QUEUE, NO_BLOCK_QUEUE, &msg);
 
-		bits[0] = 1;
+
+		if (i % 2) {
+			bits[0] = 1;
+		} else {
+			bits[0] = 0;
+		}
+
+		//bits[0] = 1;
         if (daq_digital_write(session, 1, 0, bits) != OK) {
             fprintf(stderr, "RT_THREAD: error writing to dio DAQ.\n");
             free_pointers(1, &session);
@@ -319,6 +346,9 @@ void * rt_thread (void * arg) {
         }
 
 	}
+
+	msg.id = -1;
+	send_to_queue(msqid_rt, RT_QUEUE, NO_BLOCK_QUEUE, &msg);
 
 	free_pointers(1, &session);
 	daq_close_device ((void**) &dsc);
@@ -329,23 +359,46 @@ void * rt_thread (void * arg) {
 
 
 
+
+
+
 int main () {
-	pthread_attr_t attr;
+	pthread_attr_t attr_rt, attr_wr;
     int err;
 
     printf("Starting RT benchmarking\n");
 
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+    f = fopen("data/preempt_1.txt", "w");
 
-    err = pthread_create(&thread, &attr, &rt_thread, NULL);
+    if (open_queue(&msqid_rt, &msqid_nrt) != OK) {
+        syslog(LOG_INFO, "Error opening rt queue.");
+    	return ERR;
+    }
+
+
+    pthread_attr_init(&attr_wr);
+    pthread_attr_setdetachstate(&attr_wr, PTHREAD_CREATE_JOINABLE);
+    pthread_attr_init(&attr_rt);
+    pthread_attr_setdetachstate(&attr_rt, PTHREAD_CREATE_JOINABLE);
+
+    err = pthread_create(&writer, &attr_wr, &writer_thread, NULL);
+    if (err != 0) {
+        printf("Can't create writer_thread :[%s]", strerror(err));
+        return -1;
+    }
+
+    err = pthread_create(&rt, &attr_rt, &rt_thread, NULL);
     if (err != 0) {
         printf("Can't create rt_thread :[%s]", strerror(err));
         return -1;
     }
 
 
-    pthread_join(thread, NULL);
+    pthread_join(writer, NULL);
+    pthread_join(rt, NULL);
+
+    fclose(f);
+    close_queue(&msqid_rt, &msqid_nrt);
 
     printf("RT benchmarking finished\n");
 

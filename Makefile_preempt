@@ -1,14 +1,17 @@
 CC = gcc
-CCFLAGS = -Wall --pedantic -O2 -w -g
+CCFLAGS = -Wall --pedantic -O2 -w -g 
 LIBS_COMEDI = -lcomedi -lm
 LIBS_RT = -lpthread -D_GNU_SOURCE -lrt
 
-preempt: preempt.o
-	$(CC) $(CCFLAGS) -o preempt preempt.o $(LIBS_COMEDI) $(LIBS_RT)
+preempt: preempt.o queue_functions.o
+	$(CC) $(CCFLAGS) -o preempt preempt.o queue_functions.o $(LIBS_COMEDI) $(LIBS_RT)
 
 
 preempt.o: preempt.c
 	 $(CC) $(CCFLAGS) -c $(LIBS_COMEDI) preempt.c -o preempt.o
+
+queue_functions.o: queue_functions.c
+	$(CC) $(CCFLAGS) -c $(LIBS_COMEDI) queue_functions.c -o queue_functions.o
 
 
 clean:
