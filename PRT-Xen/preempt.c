@@ -1,16 +1,11 @@
 
-
-#ifdef _X3_
-    #include <rtdm/analogy.h>
-#else
-    #include <analogy/analogy.h>
-#endif
-
+#include <comedilib.h>
 #include "queue_functions.h"
 
 
-#define OK 1
-#define ERR -1
+
+
+
 
 
 /* RT Params */
@@ -23,11 +18,13 @@
 
 typedef struct _Daq_session Daq_session;
 
-struct _Daq_session {
-    a4l_desc_t * device;
-	int idx_subd_in;
-	int idx_subd_out;
-	int idx_subd_dio;     
+struct _Daq_session{
+	comedi_t * device;
+	int in_subdev;		/*input subdevice */
+	int out_subdev;		/*output subdevice */
+	int dio_subdev;
+	int range;			
+	int aref;		
 };
 
 pthread_t rt, writer;
@@ -106,44 +103,30 @@ void free_pointers (int n, ...) {
 
 
 int daq_open_device (void ** device) {
-	int err = 0;
-	a4l_desc_t * dsc;
+	comedi_t * dsc;
 
-	*device = (a4l_desc_t *) malloc (sizeof(a4l_desc_t));
-	dsc = *device;
-	dsc->sbdata = NULL;
-
-
-	err = a4l_open(dsc, "analogy0");
-	if ( err < 0) {
-        fprintf(stderr, "Analogy: a4l_open %s failed (err=%d)\n", "analogy0", err);
-        return ERR;
-    }
-
-    dsc->sbdata = malloc(dsc->sbsize);
-
-    if (dsc->sbdata == NULL) {
-		fprintf(stderr, "Analogy: info buffer allocation failedn");
+	dsc = comedi_open("/dev/comedi0");
+	if(dsc == NULL)
+	{
+		comedi_perror("/dev/comedi0");
 		return ERR;
 	}
 
-    err = a4l_fill_desc(dsc);
-    if (err < 0) {
-        fprintf(stderr, "Analogy:  a4l_fill_desc failed (err=%d)\n", err);
-        free(dsc->sbdata);
-        return ERR;
-    }
+	*device = dsc;
 
-    return OK;
+	return OK;
 }
 
 
 int daq_close_device (void ** device) {
-	a4l_desc_t * dsc = *device;
-	if (dsc->sbdata != NULL) free(dsc->sbdata);
-	a4l_close(dsc);
+	comedi_t * dsc = *device;
 
-    return 1;
+	if (comedi_close(dsc) == -1) {
+		comedi_perror("Error with comedi_close");
+		return ERR;
+	}
+
+	return OK;
 }
 
 
@@ -151,92 +134,48 @@ int daq_create_session (void  ** device, Daq_session ** session_ptr) {
 	Daq_session * session;
 	*session_ptr = (Daq_session *) malloc (sizeof(Daq_session));
 	session = *session_ptr;
-	a4l_sbinfo_t *sbinfo;
-	int err = 0;
+	
+	session->device = (comedi_t *) *device;
+	session->range = 0; //get_range_comedi(device, subdev, chan, unit, min, max);
+	session->aref = AREF_GROUND;
 
-	session->device = (a4l_desc_t*) *device;
 
+	session->in_subdev = comedi_find_subdevice_by_type(session->device, COMEDI_SUBD_AI, 0);
+	if (session->in_subdev == -1) {
+		comedi_perror("Error finding input subdevice");
 
-	session->idx_subd_in  = session->device->idx_read_subd;
-	session->idx_subd_out  = 1;//session->device->idx_write_subd;
-	session->idx_subd_dio  = 2;//session->device->idx_write_subd;
-
-	if (session->idx_subd_in == -1) {
-		fprintf(stderr, "Analogy: no analog input subdevice available\n");
+		free(session);
 		return ERR;
 	}
 
-	if (session->idx_subd_out == -1) {
-		fprintf(stderr, "Analogy: no analog output subdevice available\n");
-		return ERR;
-	}
+	session->out_subdev = comedi_find_subdevice_by_type(session->device, COMEDI_SUBD_AO, 0);
+	if (session->out_subdev == -1) {
+		comedi_perror("Error finding output subdevice");
 
-	/*if (debug != 0) printf("Analogy: selected input subdevice index = %d\n", session->idx_subd_in);
-	if (debug != 0) printf("Analogy: selected output subdevice index = %d\n", session->idx_subd_out);*/
-
-	/* We must check that the subdevice is really an AI one
-	   (in case, the subdevice index was set with the option -s) */
-	err = a4l_get_subdinfo(session->device, session->idx_subd_in, &sbinfo);
-	if (err < 0) {
-		fprintf(stderr,
-			"insn_read: get_sbinfo(%d) failed (err = %d)\n",
-			session->idx_subd_in, err);
-		return ERR;
-	}
-
-	if ((sbinfo->flags & A4L_SUBD_TYPES) != A4L_SUBD_AI) {
-		fprintf(stderr,
-			"insn_read: wrong subdevice selected "
-			"(not an analog input)\n");
+		free(session);
 		return ERR;
 	}
 
 
-	/* We must check that the subdevice is really an AO one
-	   (in case, the subdevice index was set with the option -s) */
-	err = a4l_get_subdinfo(session->device, session->idx_subd_out, &sbinfo);
-	if (err < 0) {
-		fprintf(stderr,
-			"insn_write: get_sbinfo(%d) failed (err = %d)\n",
-			session->idx_subd_out, err);
+	session->dio_subdev = comedi_find_subdevice_by_type(session->device, COMEDI_SUBD_DIO, 0);
+	if (session->dio_subdev == -1) {
+		comedi_perror("Error finding DIO subdevice");
+
+		free(session);
 		return ERR;
+	} else {
+		 if (comedi_dio_config (session->device, session->dio_subdev, 0, COMEDI_OUTPUT) == -1) {
+		 	comedi_perror("Error setting DIO subdevice");
+			free(session);
+		 }
+
+		 if (comedi_dio_config (session->device, session->dio_subdev, 1, COMEDI_INPUT) == -1) {
+		 	comedi_perror("Error setting DIO subdevice");
+			free(session);
+		 }
 	}
 
-	if ((sbinfo->flags & A4L_SUBD_TYPES) != A4L_SUBD_AO) {
-		fprintf(stderr,
-			"insn_write: wrong subdevice selected "
-			"(not an analog output)\n");
-		return ERR;
-	}
 
-
-	/* We must check that the subdevice is really an DIO one
-	   (in case, the subdevice index was set with the option -s) */
-	err = a4l_get_subdinfo(session->device, session->idx_subd_dio, &sbinfo);
-	if (err < 0) {
-		fprintf(stderr,
-			"insn_write: get_sbinfo(%d) failed (err = %d)\n",
-			session->idx_subd_dio, err);
-		return ERR;
-	}
-
-	if ((sbinfo->flags & A4L_SUBD_TYPES) != A4L_SUBD_DIO) {
-		fprintf(stderr,
-			"insn_write: wrong subdevice selected "
-			"(not a DIO)\n");
-		return ERR;
-	}
-
-	printf("Configure\n");
-
-	/* Configure dio channel as output */
-	err = a4l_config_subd (session->device, session->idx_subd_dio, A4L_INSN_CONFIG_DIO_OUTPUT, 0);
-	if (err < 0) {
-		fprintf(stderr, "dio: a4l_config_subd failed (err = %d)\n", err);
-		return ERR;
-	}
-
-	printf("end Configure\n");
 
 	return OK;
 }
@@ -244,27 +183,23 @@ int daq_create_session (void  ** device, Daq_session ** session_ptr) {
 
 int daq_digital_write (Daq_session * session, int n_channels, int * channels, unsigned int * bits) {
 	int i;
-	unsigned int mask = 0x00000001;
+	comedi_range * range_info;
+	lsampl_t maxdata;
+	lsampl_t comedi_value;
+	unsigned int mask = 0x00000011;
 	unsigned int data = bits[0];
-	int err;
 
 
-
-    err = a4l_sync_dio(session->device, session->idx_subd_dio, &mask, &data);
-
-	if (err < 0) {
-		fprintf(stderr, "Analogy digital write1: a4l_sync_dio failed (err=%d)\n", err);
+	if (comedi_dio_bitfield2(session->device, session->dio_subdev, mask, bits, 0) != 0) {
+		comedi_perror("bitfield1");
 		return ERR;
 	}
 
 
 	/*data = 0;
 	bits[0] = 0;
-
-	err = a4l_sync_dio(session->device, session->idx_subd_dio, &mask, &data);
-
-	if (err < 0) {
-		fprintf(stderr, "Analogy digital write2: a4l_sync_dio failed (err=%d)\n", err);
+	if (comedi_dio_bitfield2(session->device, session->dio_subdev, mask, bits, 0) != 0) {
+		comedi_perror("bitfield2");
 		return ERR;
 	}*/
 
@@ -307,7 +242,6 @@ void prepare_real_time (pthread_t id) {
 
     return;
 }
-
 
 
 void * writer_thread(void * arg) {
@@ -434,7 +368,7 @@ int main () {
 
     printf("Starting RT benchmarking\n");
 
-    f = fopen("data/xenomai_1.txt", "w");
+    f = fopen("../data/preempt_1.txt", "w");
 
     if (open_queue(&msqid_rt, &msqid_nrt) != OK) {
         syslog(LOG_INFO, "Error opening rt queue.");
