@@ -6,7 +6,7 @@ Simple set of programs developed to benchmark the real-time performance of the f
 - Xenomai 3
 - Preempt-RT
 
-It is recommended to use another program, like Sysbench, to overload the system to run the test under stress conditions.
+It is recommended to use another program, like Sysbench (https://github.com/akopytov/sysbench), to overload the system to run the test under stress conditions.
 
 
 The tests consist in periodic iterations of a loop, during which the elapsed time of the test and the latency of that iteration will be sent through a FIFO queue to a writer thread that will store this values in a file, and voltage pulses with be sent to DAQ device so the times can also be measured with an external device (an oscilloscope, for example).
