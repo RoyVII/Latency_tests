@@ -1,0 +1,2 @@
+EXTRA_CFLAGS := -I/usr/realtime/include -I/usr/include/ -I/usr/src/linux/include -I/usr/local/comedi/include  -I$(PWD) -I$(PWD)/../../include -lpthread -ffast-math -mhard-float -L/usr/reatime/lib -llxrt
+obj-m	:= test_module.o

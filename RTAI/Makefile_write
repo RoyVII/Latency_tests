@@ -1,0 +1,5 @@
+write_to_file:
+	gcc -o write_to_file write_to_file.c
+
+clean:
+	rm -f write_to_file
