@@ -332,9 +332,10 @@ void * rt_thread (void * arg) {
 	int i;
 	long points;
 	pthread_t id;
-	double freq = 10.0;
-	int duration = 30;
+	double freq = 20000.0;
+	int duration = 10;
 	long period;
+    int count = -1, aux;
 
 	double t_elapsed;                           /* In milliseconds */
     long lat;
@@ -376,10 +377,13 @@ void * rt_thread (void * arg) {
 	points = duration * freq;
 	period = (1.0 / freq) * NSEC_PER_SEC;
 
+    
+
 
 	clock_gettime(CLOCK_MONOTONIC, &ts_target);
     ts_assign(&ts_start,  ts_target);
 	ts_add_time(&ts_target, 0, period);
+
 
 
 	for (i = 0; i < points; i++) {
@@ -392,6 +396,7 @@ void * rt_thread (void * arg) {
         t_elapsed = (ts_result.tv_sec * NSEC_PER_SEC + ts_result.tv_nsec) * 0.000001;
 
 		ts_add_time(&ts_target, 0, period);
+
 
         if (i % 200 == 0 && i > 0) {
             bits[0] = 1;
@@ -429,8 +434,7 @@ void * rt_thread (void * arg) {
 
 	}
 
-
-	printf("RT thread end\n");
+    printf("RT thread end\n");
 
 	msg.id = -1;
 	send_to_queue(msqid_rt, RT_QUEUE, NO_BLOCK_QUEUE, &msg);
