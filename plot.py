@@ -5,12 +5,12 @@ import matplotlib.gridspec as gridspec
 import argparse
 import math
 
-filename_scope = "data/scope_10.csv"
+filename_scope = "data/scope_3.csv"
 dataset = pd.read_csv(filename_scope, delimiter=',', header=2)
 data_scope = dataset.values
 
 
-filename_lat = "data/preempt_lat10.txt"
+filename_lat = "data/xenomai_lat3.txt"
 dataset = pd.read_csv(filename_lat, delimiter=' ', header=0)
 data_lat = dataset.values
 
@@ -140,7 +140,6 @@ for i in range(1, len(zero_t_scope)):
 
 for i in range(1, len(zero_t_lat)):
 	periods_lat.append(zero_t_lat[i] - zero_t_lat[i-1])
-
 
 
 

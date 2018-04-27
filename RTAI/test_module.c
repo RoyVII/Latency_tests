@@ -11,7 +11,7 @@ static RT_TASK rt_get_data_task;
 
 #define NSEC_PER_SEC (1000000000)
 double freq = 20000.0;
-unsigned int t = 30;
+unsigned int t = 10;
 RTIME period;
 
 /* Aux */
@@ -30,6 +30,7 @@ static void rt_latency_loop (int arg) {
     unsigned int data;
     message msg;
     long points = t * freq;
+    int count = -1, aux;
 
 	RTIME iter, period, start;
 	int lat;
@@ -59,7 +60,16 @@ static void rt_latency_loop (int arg) {
 		msg.lat = (int) count2nano(rt_get_time() - expected);
         msg.absol = ((RTIME) count2nano(rt_get_time() - start)) * 0.000001;
 
-        if (i % 2 || i < 2 || i > points-3) {
+        if (i % 200 == 0 && i > 0) {
+            data = 1;
+            aux = 0;
+            count += 1;
+            //printf("dentro de 200 %d\n", i);
+        } else if (aux < count) {
+            data = 1;
+            aux += 1;
+            //printf("dentro de aux %d %d %d\n", i, aux, count);
+        } else if (i % 2 == 0) {
             data = 1;
         } else {
             data = 0;
