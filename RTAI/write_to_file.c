@@ -13,7 +13,7 @@ typedef struct {
 } message;
 
 
-int main () {
+int main (int argc, char *argv[]) {
 	FILE * f;
 	int fifo_id;
     int ret;
@@ -23,7 +23,7 @@ int main () {
 	message msg;
     msg.id = 0;
 
-	f = fopen("../data/rtai_1.txt", "w");
+	f = fopen(argv[1], "w");
     
     fifo_id = open("/dev/rtf0", O_RDONLY);
     if (fifo_id == -1) {

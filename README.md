@@ -24,7 +24,7 @@ The program needs to be loaded as a kernel module, while a secondary write_to_fi
 ```  
 sudo make
 make -f Makefile_write
-./write_to_file
+./write_to_file <filename>
 sudo ./insmod test_module
 ``` 
 
@@ -39,7 +39,7 @@ sudo rmmod test_module
 ### Xenomai
 It can be compiled for Xenomai 2 or Xenomai 3 by using their corresponding Makefiles. Once compiled, it can be run with:
 ``` 
-sudo ./xenomai
+sudo ./xenomai <filename>
 ```
 
 The frequency, duration or filename can be modified in xenomai.c.
@@ -48,7 +48,7 @@ The frequency, duration or filename can be modified in xenomai.c.
 ### Preempt-RT
 ``` 
 make -f Makefile_preempt
-sudo ./preempt
+sudo ./preempt <filename>
 ```
 
 The frequency, duration or filename can be modified in preempt.c.
