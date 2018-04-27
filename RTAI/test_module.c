@@ -20,6 +20,7 @@ typedef struct {
     short id;
     int lat;
     double absol;
+    int data;
 } message;
 
 
