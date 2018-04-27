@@ -393,15 +393,31 @@ void * rt_thread (void * arg) {
 
 		ts_add_time(&ts_target, 0, period);
 
-		sprintf(msg.data, "%f %ld", t_elapsed, lat);
+        if (i % 200 == 0 && i > 0) {
+            bits[0] = 1;
+            aux = 0;
+            count += 1;
+            //printf("dentro de 200 %d\n", i);
+        } else if (aux < count) {
+            bits[0] = 1;
+            aux += 1;
+            //printf("dentro de aux %d %d %d\n", i, aux, count);
+        } else if (i % 2 == 0) {
+            bits[0] = 1;
+        } else {
+            bits[0] = 0;
+        }
+
+        /*if (i % 2) {
+            bits[0] = 1;
+        } else if ((i % 200 || i % 20 || i % 2 != 0){
+            bits[0] = 0;
+        }*/
+
+		sprintf(msg.data, "%f %ld %d", t_elapsed, lat, bits[0]);
     	send_to_queue(msqid_rt, RT_QUEUE, NO_BLOCK_QUEUE, &msg);
 
 
-		if (i % 2) {
-			bits[0] = 1;
-		} else {
-			bits[0] = 0;
-		}
 
 		//bits[0] = 1;
         if (daq_digital_write(session, 1, 0, bits) != OK) {
@@ -412,6 +428,9 @@ void * rt_thread (void * arg) {
         }
 
 	}
+
+
+	printf("RT thread end\n");
 
 	msg.id = -1;
 	send_to_queue(msqid_rt, RT_QUEUE, NO_BLOCK_QUEUE, &msg);
@@ -428,13 +447,13 @@ void * rt_thread (void * arg) {
 
 
 
-int main () {
+int main (int argc, char *argv[]) {
 	pthread_attr_t attr_rt, attr_wr;
     int err;
 
     printf("Starting RT benchmarking\n");
 
-    f = fopen("../data/xenomai_1.txt", "w");
+    f = fopen(argv[1], "w");
 
     if (open_queue(&msqid_rt, &msqid_nrt) != OK) {
         syslog(LOG_INFO, "Error opening rt queue.");

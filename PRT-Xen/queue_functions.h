@@ -33,7 +33,7 @@
 
 typedef struct {
     short id;
-    char data[25];
+    char data[30];
 } message;
 
 

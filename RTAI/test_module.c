@@ -59,14 +59,15 @@ static void rt_latency_loop (int arg) {
 		msg.lat = (int) count2nano(rt_get_time() - expected);
         msg.absol = ((RTIME) count2nano(rt_get_time() - start)) * 0.000001;
 
-        rtf_put(0, &msg, sizeof(msg));
-
-
-        if (i % 2) {
+        if (i % 2 || i < 2 || i > points-3) {
             data = 1;
         } else {
             data = 0;
         }
+
+        msg.data = data;
+
+        rtf_put(0, &msg, sizeof(msg));
 
         comedi_dio_bitfield (dsc, 2, mask, &data);
         //msleep(2000);

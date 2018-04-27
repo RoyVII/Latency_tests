@@ -9,6 +9,7 @@ typedef struct {
     short id;
     int lat;
     double absol;
+    int data;
 } message;
 
 
@@ -39,7 +40,7 @@ int main () {
              break;
         }
 
-    	fprintf(f, "%f %d\n", msg.absol, msg.lat);
+    	fprintf(f, "%f %d %d\n", msg.absol, msg.lat, msg.data);
 	}
 
     
