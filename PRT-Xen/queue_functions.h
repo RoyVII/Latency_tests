@@ -1,7 +1,6 @@
 #ifndef QUEUE_FUNCTIONS_H__
 #define QUEUE_FUNCTIONS_H__
 
-
 #include <sys/types.h>
 
 #include <syslog.h>
