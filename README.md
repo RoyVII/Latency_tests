@@ -57,8 +57,9 @@ The frequency, duration or filename can be modified in preempt.c.
 
 ### stress
 ```
-stress --cpu 8 --io 4 --vm 2 --vm-bytes 128M --timeout 10s
+stress --cpu 8 --io 4 --vm 2 --vm-bytes 128M --timeout <time>s
 ```
+Timeout determines the duration of the workload in seconds.
 
 
 ## Dependencies
