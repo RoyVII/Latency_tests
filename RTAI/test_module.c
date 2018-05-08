@@ -61,16 +61,20 @@ static void rt_latency_loop (int arg) {
 		msg.lat = (int) count2nano(rt_get_time() - expected);
         msg.absol = ((RTIME) count2nano(rt_get_time() - start)) * 0.000001;
 
-        if (i % 200 == 0 && i > 0) {
+        /*if (i % 200 == 0 && i > 0) {
             data = 1;
             aux = 0;
             count += 1;
-            //printf("dentro de 200 %d\n", i);
         } else if (aux < count) {
             data = 1;
             aux += 1;
-            //printf("dentro de aux %d %d %d\n", i, aux, count);
         } else if (i % 2 == 0) {
+            data = 1;
+        } else {
+            data = 0;
+        }*/
+
+        if (i % 2) {
             data = 1;
         } else {
             data = 0;
